@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GEOSINTEL — Geospatial Intelligence System</title>
+  <meta name="description"
+    content="Classified 3D geospatial intelligence dashboard with real-time data fusion, satellite tracking, and advanced post-processing" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="/src/styles/index.css" />
+</head>
+
+<body>
+  <div id="cesiumContainer"></div>
+
+  <!-- Top HUD Bar -->
+  <header id="hud-top">
+    <div class="hud-logo">
+      <span class="logo-icon">◆</span>
+      <span class="logo-text">GEOSINTEL</span>
+      <span class="logo-sub">v4.5.0 // UNCLASSIFIED</span>
+    </div>
+    <div class="hud-search">
+      <input type="text" id="search-input" class="search-input" placeholder="Search location..." autocomplete="off" />
+      <button id="search-btn" class="search-btn" title="Search">🔍</button>
+      <div id="search-results" class="search-results" style="display:none;"></div>
+    </div>
+    <div class="hud-clock">
+      <span id="hud-utc"></span>
+      <span class="hud-divider">|</span>
+      <span id="hud-local"></span>
+    </div>
+    <div class="hud-right">
+      <span class="hud-fps" id="hud-fps">— FPS</span>
+      <div class="hud-coords">
+        <span>LAT <span id="hud-lat">—</span></span>
+        <span>LON <span id="hud-lon">—</span></span>
+        <span>ALT <span id="hud-alt">—</span></span>
+      </div>
+      <button id="btn-settings" class="hud-gear" title="API Key Settings">⚙</button>
+    </div>
+  </header>
+
+  <!-- Settings Panel -->
+  <aside id="panel-settings" class="glass-panel" style="display:none;">
+    <h2 class="panel-title">API KEY SETTINGS</h2>
+    <p class="settings-hint">Keys are stored locally in your browser. They are never sent to any third-party server.</p>
+    <div id="settings-body"></div>
+    <button id="btn-settings-close" class="btn-ghost" style="margin-top:12px;width:100%;">CLOSE</button>
+  </aside>
+
+  <!-- Left Panel: Data Layers -->
+  <aside id="panel-layers" class="glass-panel">
+    <h2 class="panel-title">DATA LAYERS</h2>
+
+    <div class="layer-group">
+      <label class="layer-toggle">
+        <input type="checkbox" id="toggle-satellites" />
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">🛰 Satellites (ALL)</span>
+      </label>
+    </div>
+
+    <div class="layer-group">
+      <label class="layer-toggle">
+        <input type="checkbox" id="toggle-aviation" />
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">✈ Aviation (Global)</span>
+      </label>
+    </div>
+
+    <div class="layer-group">
+      <label class="layer-toggle">
+        <input type="checkbox" id="toggle-military" />
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">🔶 Military Aviation</span>
+      </label>
+      <div class="layer-sub" id="mil-options" style="display:none;">
+        <label><input type="checkbox" id="hide-commercial" /> Hide commercial</label>
+      </div>
+    </div>
+
+    <div class="layer-group">
+      <label class="layer-toggle">
+        <input type="checkbox" id="toggle-seismic" />
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">🌋 Seismic Events</span>
+      </label>
+    </div>
+
+    <div class="layer-group">
+      <label class="layer-toggle">
+        <input type="checkbox" id="toggle-cctv" />
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">📹 CCTV Cameras</span>
+      </label>
+    </div>
+
+    <div class="layer-group">
+      <label class="layer-toggle">
+        <input type="checkbox" id="toggle-traffic" />
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">🚗 Traffic Detection</span>
+      </label>
+    </div>
+
+    <div class="layer-group">
+      <label class="layer-toggle">
+        <input type="checkbox" id="toggle-borders" />
+        <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        <span class="toggle-label">🗺 Country Borders</span>
+      </label>
+    </div>
+  </aside>
+
+  <!-- Right Panel: Shader Controls -->
+  <aside id="panel-shaders" class="glass-panel">
+    <h2 class="panel-title">POST-PROCESSING</h2>
+    <div class="shader-mode-group">
+      <button class="shader-btn active" data-mode="none">OFF</button>
+      <button class="shader-btn" data-mode="crt">CRT</button>
+      <button class="shader-btn" data-mode="nightvision">NV</button>
+      <button class="shader-btn" data-mode="flir">FLIR</button>
+      <button class="shader-btn" data-mode="anime">ANIME</button>
+      <button class="shader-btn" data-mode="halftone">HALF</button>
+      <button class="shader-btn" data-mode="glitch">GLTCH</button>
+    </div>
+    <div class="shader-sliders">
+      <div class="slider-row">
+        <label for="slider-sensitivity">SENSITIVITY</label>
+        <input type="range" id="slider-sensitivity" min="0" max="100" value="50" />
+        <span class="slider-value" id="val-sensitivity">50</span>
+      </div>
+      <div class="slider-row">
+        <label for="slider-pixelation">PIXELATION</label>
+        <input type="range" id="slider-pixelation" min="0" max="100" value="0" />
+        <span class="slider-value" id="val-pixelation">0</span>
+      </div>
+      <div class="slider-row">
+        <label for="slider-bloom">BLOOM</label>
+        <input type="range" id="slider-bloom" min="0" max="100" value="20" />
+        <span class="slider-value" id="val-bloom">20</span>
+      </div>
+      <div class="slider-row">
+        <label for="slider-sharpen">SHARPEN</label>
+        <input type="range" id="slider-sharpen" min="0" max="100" value="0" />
+        <span class="slider-value" id="val-sharpen">0</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Bottom: Camera + Location Save -->
+  <footer id="hud-bottom">
+    <div class="shortcut-bar">
+      <button id="btn-save-location" class="shortcut-action-btn" title="Save current camera position to a slot">💾
+        SAVE</button>
+      <button id="btn-clear-locations" class="shortcut-action-btn" title="Clear all saved locations">🗑 CLEAR</button>
+      <span class="shortcut-divider">│</span>
+      <div id="shortcut-slots">
+        <!-- Dynamic: filled by CameraDirector.refreshShortcutBar() -->
+        <span class="shortcut-key">Q</span><span class="shortcut-label">—</span>
+        <span class="shortcut-key">W</span><span class="shortcut-label">—</span>
+        <span class="shortcut-key">E</span><span class="shortcut-label">—</span>
+        <span class="shortcut-key">R</span><span class="shortcut-label">—</span>
+        <span class="shortcut-key">T</span><span class="shortcut-label">—</span>
+      </div>
+    </div>
+    <div id="status-bar">
+      <span class="status-dot"></span>
+      <span id="status-text">SYSTEM ONLINE</span>
+    </div>
+  </footer>
+
+  <!-- API Key Modal -->
+  <div id="api-key-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-card glass-panel">
+      <h2 class="panel-title" id="api-modal-title">API KEY REQUIRED</h2>
+      <p id="api-modal-desc" class="modal-desc"></p>
+      <input type="text" id="api-key-input" class="modal-input" placeholder="Paste your API key..."
+        autocomplete="off" />
+      <div class="modal-actions">
+        <button id="api-key-submit" class="btn-primary">AUTHORIZE</button>
+        <button id="api-key-cancel" class="btn-ghost">CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Entity Info Panel -->
+  <div id="entity-info" class="glass-panel" style="display:none;">
+    <h3 class="panel-title" id="entity-info-title">—</h3>
+    <div id="entity-info-body"></div>
+    <div class="entity-info-actions">
+      <button id="entity-info-close" class="btn-ghost">CLOSE</button>
+      <button id="entity-info-track" class="btn-primary" style="display:none;">TRACK</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
